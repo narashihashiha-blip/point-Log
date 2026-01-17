@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Point Log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+
+<h1>Point Log</h1>
+
+<input type="date" id="date">
+<input type="number" id="point" placeholder="ポイント">
+<input type="text" id="memo" placeholder="メモ">
+<button onclick="save()">保存</button>
+
+<ul id="list"></ul>
+
+<script>
+const dateInput = document.getElementById("date");
+const pointInput = document.getElementById("point");
+const memoInput = document.getElementById("memo");
+const list = document.getElementById("list");
+
+function save() {
+  const date = dateInput.value;
+  const point = pointInput.value;
+  const memo = memoInput.value;
+
+  if (!date || !point) return;
+
+  const logs = JSON.parse(localStorage.getItem("logs") || "[]");
+  logs.push({ date, point, memo });
+  localStorage.setItem("logs", JSON.stringify(logs));
+
+  memoInput.value = "";
+  pointInput.value = "";
+
+  show();
+}
+
+function show() {
+  list.innerHTML = "";
+  const logs = JSON.parse(localStorage.getItem("logs") || "[]");
+
+  logs.forEach(l => {
+    const li = document.createElement("li");
+    li.textContent = `${l.date}｜${l.point}pt｜${l.memo || ""}`;
+    list.appendChild(li);
+  });
+}
+
+show();
+</script>
+
+</body>
+</html>
