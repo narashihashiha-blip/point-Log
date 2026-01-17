@@ -1,22 +1,35 @@
-const colorSelect = document.getElementById("pointColor");
+function addPointToList(name, value, date, color) {
+  const li = document.createElement("li");
 
-saveBtn.addEventListener("click", () => {
-  const name = nameInput.value.trim();
-  const value = Number(valueInput.value);
-  const color = colorSelect.value; // ←ここで色を取得
-  if(!name || !value) return;
+  const nameSpan = document.createElement("span");
+  nameSpan.style.fontWeight = "bold";
+  nameSpan.style.color = color; // ←ここで色を反映
+  nameSpan.textContent = name;
 
-  const today = new Date();
-  const dateStr = `${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}`;
+  const dateSpan = document.createElement("span");
+  dateSpan.style.color = "#555";
+  dateSpan.textContent = ` - ${date}: `;
 
-  // 個別リストに追加する関数に color も渡す
-  addPointToList(name, value, dateStr, color);
+  const valueSpan = document.createElement("span");
+  valueSpan.textContent = `${value}ポイント`;
 
-  // localStorage にも色を保存
-  savedPoints.push({name, value, date: dateStr, color});
-  localStorage.setItem("points", JSON.stringify(savedPoints));
+  li.appendChild(nameSpan);
+  li.appendChild(dateSpan);
+  li.appendChild(valueSpan);
 
-  updateTotals();
-  nameInput.value = "";
-  valueInput.value = "";
-});
+  // 削除ボタン
+  const delBtn = document.createElement("button");
+  delBtn.textContent = "削除";
+  delBtn.style.background = "#f44336";
+  delBtn.style.color = "#fff";
+  delBtn.style.marginLeft = "10px";
+  delBtn.addEventListener("click", () => {
+    pointList.removeChild(li);
+    savedPoints = savedPoints.filter(item => !(item.name === name && item.value === value && item.date === date));
+    localStorage.setItem("points", JSON.stringify(savedPoints));
+    updateTotals();
+  });
+
+  li.appendChild(delBtn);
+  pointList.appendChild(li);
+}
