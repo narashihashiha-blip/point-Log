@@ -12,6 +12,62 @@
     button { background: #4CAF50; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
     ul { padding-left: 20px; }
     li { margin-bottom: 5px; }
-    li button { background: #f44336; margin-left: 10px; }
+    li button { background: #f44336; margin-left: 10px; color: #fff; border: none; border-radius: 3px; cursor: pointer; }
   </style>
 </head>
+<body>
+
+  <h1>Point Log</h1>
+
+  <div class="card">
+    <p>ポイント名を入力</p>
+    <input type="text" id="pointInput" placeholder="例：楽天ポイント">
+    <button id="saveBtn">保存</button>
+  </div>
+
+  <h2>保存済みポイント</h2>
+  <ul id="pointList"></ul>
+
+  <script>
+    const input = document.getElementById("pointInput");
+    const saveBtn = document.getElementById("saveBtn");
+    const list = document.getElementById("pointList");
+
+    // ページ読み込み時に保存済みポイントを表示
+    let savedPoints = JSON.parse(localStorage.getItem("points") || "[]");
+    savedPoints.forEach(p => addPointToList(p.text, p.date));
+
+    function addPointToList(text, date) {
+      const li = document.createElement("li");
+      li.textContent = `${date} - ${text}`;
+
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "削除";
+      delBtn.addEventListener("click", () => {
+        list.removeChild(li);
+        savedPoints = savedPoints.filter(item => !(item.text === text && item.date === date));
+        localStorage.setItem("points", JSON.stringify(savedPoints));
+      });
+
+      li.appendChild(delBtn);
+      list.appendChild(li);
+    }
+
+    saveBtn.addEventListener("click", () => {
+      const value = input.value.trim();
+      if(!value) return;
+
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}`;
+
+      addPointToList(value, dateStr);
+
+      savedPoints.push({text: value, date: dateStr});
+      localStorage.setItem("points", JSON.stringify(savedPoints));
+
+      input.value = "";
+    });
+  </script>
+
+</body>
+</html>
