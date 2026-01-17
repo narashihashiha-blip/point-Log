@@ -1,12 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Point Log</title>
+<style>
+  body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
+  h1, h2 { text-align: center; }
+  .card { background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+  input, button { width: 100%; padding: 10px; margin-top: 8px; font-size: 16px; }
+  button { border: none; border-radius: 5px; cursor: pointer; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 5px; }
+</style>
+</head>
+<body>
+
+<h1>Point Log</h1>
+
+<div class="card">
+  <input type="text" id="pointName" placeholder="例：楽天ポイント">
+  <input type="number" id="pointValue" placeholder="ポイント数">
+  <button id="saveBtn" style="background:#4CAF50; color:#fff;">保存</button>
+</div>
+
+<h2>保存済みポイント</h2>
+<ul id="pointList"></ul>
+
+<h2>合計ポイント: <span id="totalPoints">0</span></h2>
+
+<h2>サービス別合計</h2>
+<ul id="serviceTotalList"></ul>
+
+<h2>月別合計</h2>
+<ul id="monthTotalList"></ul>
+
+<script>
+const nameInput = document.getElementById("pointName");
+const valueInput = document.getElementById("pointValue");
+const saveBtn = document.getElementById("saveBtn");
+const pointList = document.getElementById("pointList");
+const totalEl = document.getElementById("totalPoints");
+const serviceList = document.getElementById("serviceTotalList");
+const monthList = document.getElementById("monthTotalList");
+
+let savedPoints = JSON.parse(localStorage.getItem("points") || "[]");
+
+// 個別リストに追加
 function addPointToList(name, value, date) {
   const li = document.createElement("li");
 
-  // サービス名の色付け
+  // 名前の色分け
   const nameSpan = document.createElement("span");
+  nameSpan.style.fontWeight = "bold";
   if(name.includes("楽天")) nameSpan.style.color = "#1E90FF";
   else if(name.includes("Tポイント")) nameSpan.style.color = "#FF8C00";
   else nameSpan.style.color = "#32CD32";
-  nameSpan.style.fontWeight = "bold";
   nameSpan.textContent = name;
 
   const dateSpan = document.createElement("span");
@@ -24,6 +73,8 @@ function addPointToList(name, value, date) {
   const delBtn = document.createElement("button");
   delBtn.textContent = "削除";
   delBtn.style.background = "#f44336";
+  delBtn.style.color = "#fff";
+  delBtn.style.marginLeft = "10px";
   delBtn.addEventListener("click", () => {
     pointList.removeChild(li);
     savedPoints = savedPoints.filter(item => !(item.name === name && item.value === value && item.date === date));
@@ -34,3 +85,64 @@ function addPointToList(name, value, date) {
   li.appendChild(delBtn);
   pointList.appendChild(li);
 }
+
+// 集計更新
+function updateTotals() {
+  // 総合計
+  const total = savedPoints.reduce((sum, p) => sum + Number(p.value), 0);
+  totalEl.textContent = total;
+
+  // サービス別
+  const serviceMap = {};
+  savedPoints.forEach(p => {
+    if(!serviceMap[p.name]) serviceMap[p.name] = 0;
+    serviceMap[p.name] += Number(p.value);
+  });
+  serviceList.innerHTML = "";
+  for(const [name, value] of Object.entries(serviceMap)) {
+    const li = document.createElement("li");
+    li.textContent = `${name}: ${value}ポイント`;
+    serviceList.appendChild(li);
+  }
+
+  // 月別
+  const monthMap = {};
+  savedPoints.forEach(p => {
+    const month = p.date.slice(0,7); // YYYY-MM
+    if(!monthMap[month]) monthMap[month] = 0;
+    monthMap[month] += Number(p.value);
+  });
+  monthList.innerHTML = "";
+  for(const [month, value] of Object.entries(monthMap)) {
+    const li = document.createElement("li");
+    li.textContent = `${month}: ${value}ポイント`;
+    monthList.appendChild(li);
+  }
+}
+
+// ページロード時
+savedPoints.forEach(p => addPointToList(p.name, p.value, p.date));
+updateTotals();
+
+// 保存ボタン
+saveBtn.addEventListener("click", () => {
+  const name = nameInput.value.trim();
+  const value = Number(valueInput.value);
+  if(!name || !value) return;
+
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}`;
+
+  addPointToList(name, value, dateStr);
+  savedPoints.push({name, value, date: dateStr});
+  localStorage.setItem("points", JSON.stringify(savedPoints));
+  updateTotals();
+
+  nameInput.value = "";
+  valueInput.value = "";
+});
+</script>
+
+</body>
+</html>
+
