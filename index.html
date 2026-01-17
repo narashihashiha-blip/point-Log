@@ -55,9 +55,10 @@ const totalEl = document.getElementById("totalPoints");
 const serviceList = document.getElementById("serviceTotalList");
 const monthList = document.getElementById("monthTotalList");
 
+// localStorage のポイントを取得
 let savedPoints = JSON.parse(localStorage.getItem("points") || "[]");
 
-// 個別リストに追加する安全な関数
+// 個別リストに追加（安全版）
 function addPointToList(name, value, date, color) {
   const li = document.createElement("li");
 
@@ -93,7 +94,7 @@ function addPointToList(name, value, date, color) {
   pointList.appendChild(li);
 }
 
-// 合計・サービス別・月別集計を更新
+// 合計・サービス別・月別集計更新
 function updateTotals() {
   const total = savedPoints.reduce((sum, p) => sum + Number(p.value), 0);
   totalEl.textContent = total;
@@ -127,10 +128,13 @@ function updateTotals() {
 }
 
 // ページロード時に復元
-savedPoints.forEach(p => addPointToList(p.name, p.value, p.date, p.color));
+savedPoints.forEach(p => {
+  const color = p.color || "#000"; // 古いデータの色が無い場合は黒
+  addPointToList(p.name, p.value, p.date, color);
+});
 updateTotals();
 
-// 保存ボタン
+// 保存ボタン処理
 saveBtn.addEventListener("click", () => {
   const name = nameInput.value.trim();
   const value = Number(valueInput.value);
