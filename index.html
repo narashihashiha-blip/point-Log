@@ -1,15 +1,22 @@
-<div class="card">
-  <input type="text" id="pointName" placeholder="例：楽天ポイント">
-  <input type="number" id="pointValue" placeholder="ポイント数">
+const colorSelect = document.getElementById("pointColor");
 
-  <!-- 色選択用 -->
-  <select id="pointColor">
-    <option value="#FF69B4">ピンク</option>
-    <option value="#1E90FF">青</option>
-    <option value="#32CD32">緑</option>
-    <option value="#FFFF00">黄色</option>
-    <option value="#800080">紫</option>
-  </select>
+saveBtn.addEventListener("click", () => {
+  const name = nameInput.value.trim();
+  const value = Number(valueInput.value);
+  const color = colorSelect.value; // ←ここで色を取得
+  if(!name || !value) return;
 
-  <button id="saveBtn" style="background:#4CAF50; color:#fff;">保存</button>
-</div>
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}`;
+
+  // 個別リストに追加する関数に color も渡す
+  addPointToList(name, value, dateStr, color);
+
+  // localStorage にも色を保存
+  savedPoints.push({name, value, date: dateStr, color});
+  localStorage.setItem("points", JSON.stringify(savedPoints));
+
+  updateTotals();
+  nameInput.value = "";
+  valueInput.value = "";
+});
