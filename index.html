@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Point Log</title>
+<title>Point Log 安定版</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
@@ -35,7 +35,7 @@ canvas { max-width: 100%; margin: 0 auto; display: block; }
 </head>
 <body>
 
-<h1>Point Log</h1>
+<h1>Point Log 安定版</h1>
 
 <div class="card">
   <input type="text" id="pointName" placeholder="例：楽天ポイント">
@@ -81,14 +81,20 @@ const monthList = document.getElementById("monthTotalList");
 const ctx = document.getElementById('serviceChart').getContext('2d');
 let serviceChart;
 
-let savedPoints = JSON.parse(localStorage.getItem("points") || "[]");
+// localStorage 初期化・古い形式対応
+let rawPoints = JSON.parse(localStorage.getItem("points") || "[]");
+let savedPoints = rawPoints.map(p => {
+  // 古いデータには yen がない場合があるので計算
+  if(!p.yen) p.yen = Math.round(Number(p.value || 0) * Number(p.rate || 1) * 100)/100;
+  return {name:p.name, value:Number(p.value||0), yen:Number(p.yen||0), date:p.date||new Date().toISOString().slice(0,10), color:p.color||"#000"};
+});
 
-// ポイントをグループ化（日付＋サービス名）
-function groupPoints(points) {
-  const map = {};
-  points.forEach(p => {
+// グループ化（日付＋サービス名）
+function groupPoints(points){
+  const map={};
+  points.forEach(p=>{
     const key = `${p.date}_${p.name}`;
-    if(!map[key]) map[key] = { ...p };
+    if(!map[key]) map[key] = {...p};
     else {
       map[key].value += Number(p.value);
       map[key].yen += Number(p.yen);
@@ -97,35 +103,35 @@ function groupPoints(points) {
   return Object.values(map);
 }
 
-// 個別リストに追加
-function updatePointList() {
-  pointList.innerHTML = "";
+// 個別リスト更新
+function updatePointList(){
+  pointList.innerHTML="";
   const grouped = groupPoints(savedPoints);
-  grouped.forEach(p => {
-    const li = document.createElement("li");
+  grouped.forEach(p=>{
+    const li=document.createElement("li");
 
-    const nameSpan = document.createElement("span");
-    nameSpan.style.fontWeight = "bold";
-    nameSpan.style.color = p.color;
-    nameSpan.textContent = p.name;
+    const nameSpan=document.createElement("span");
+    nameSpan.style.fontWeight="bold";
+    nameSpan.style.color=p.color;
+    nameSpan.textContent=p.name;
 
-    const dateSpan = document.createElement("span");
-    dateSpan.style.color = "#555";
-    dateSpan.style.margin = "0 4px";
-    dateSpan.textContent = `- ${p.date}: `;
+    const dateSpan=document.createElement("span");
+    dateSpan.style.color="#555";
+    dateSpan.style.margin="0 4px";
+    dateSpan.textContent=`- ${p.date}: `;
 
-    const valueSpan = document.createElement("span");
-    valueSpan.textContent = `${p.value}ポイント (${p.yen}円)`;
+    const valueSpan=document.createElement("span");
+    valueSpan.textContent=`${p.value}ポイント (${p.yen}円)`;
 
     li.appendChild(nameSpan);
     li.appendChild(dateSpan);
     li.appendChild(valueSpan);
 
-    const delBtn = document.createElement("button");
-    delBtn.textContent = "×";
-    delBtn.className = "deleteBtn";
-    delBtn.addEventListener("click", () => {
-      savedPoints = savedPoints.filter(item => !(item.name === p.name && item.date === p.date));
+    const delBtn=document.createElement("button");
+    delBtn.textContent="×";
+    delBtn.className="deleteBtn";
+    delBtn.addEventListener("click",()=>{
+      savedPoints = savedPoints.filter(item=>!(item.name===p.name && item.date===p.date));
       localStorage.setItem("points", JSON.stringify(savedPoints));
       updatePointList();
       updateTotals();
@@ -137,62 +143,62 @@ function updatePointList() {
   });
 }
 
-// 合計・サービス別・月別更新
-function updateTotals() {
-  const totalPoints = savedPoints.reduce((sum, p) => sum + Number(p.value), 0);
-  const totalYen = savedPoints.reduce((sum, p) => sum + Number(p.yen), 0);
-  totalEl.textContent = totalPoints;
-  totalYenEl.textContent = totalYen;
+// 集計更新
+function updateTotals(){
+  const totalPoints = savedPoints.reduce((sum,p)=>sum+Number(p.value),0);
+  const totalYen = savedPoints.reduce((sum,p)=>sum+Number(p.yen),0);
+  totalEl.textContent=totalPoints;
+  totalYenEl.textContent=totalYen;
 
-  const serviceMap = {};
-  savedPoints.forEach(p => {
-    if(!serviceMap[p.name]) serviceMap[p.name] = { value:0, yen:0 };
+  const serviceMap={};
+  savedPoints.forEach(p=>{
+    if(!serviceMap[p.name]) serviceMap[p.name]={value:0, yen:0};
     serviceMap[p.name].value += Number(p.value);
     serviceMap[p.name].yen += Number(p.yen);
   });
-  serviceList.innerHTML = "";
-  for(const [name, obj] of Object.entries(serviceMap)) {
-    const li = document.createElement("li");
-    li.textContent = `${name}: ${obj.value}ポイント (${obj.yen}円)`;
+  serviceList.innerHTML="";
+  for(const [name,obj] of Object.entries(serviceMap)){
+    const li=document.createElement("li");
+    li.textContent=`${name}: ${obj.value}ポイント (${obj.yen}円)`;
     serviceList.appendChild(li);
   }
 
-  const monthMap = {};
-  savedPoints.forEach(p => {
-    const month = p.date.slice(0,7);
-    if(!monthMap[month]) monthMap[month] = 0;
-    monthMap[month] += Number(p.yen);
+  const monthMap={};
+  savedPoints.forEach(p=>{
+    const month=p.date.slice(0,7);
+    if(!monthMap[month]) monthMap[month]=0;
+    monthMap[month]+=Number(p.yen);
   });
-  monthList.innerHTML = "";
-  for(const [month, value] of Object.entries(monthMap)) {
-    const li = document.createElement("li");
-    li.textContent = `${month}: ${value}円`;
+  monthList.innerHTML="";
+  for(const [month,value] of Object.entries(monthMap)){
+    const li=document.createElement("li");
+    li.textContent=`${month}: ${value}円`;
     monthList.appendChild(li);
   }
 }
 
-// アプリ別円グラフ
-function updateServiceChart() {
-  const serviceMap = {};
-  savedPoints.forEach(p => {
-    if(!serviceMap[p.name]) serviceMap[p.name] = 0;
-    serviceMap[p.name] += Number(p.yen);
+// 円グラフ更新
+function updateServiceChart(){
+  const serviceMap={};
+  savedPoints.forEach(p=>{
+    if(!serviceMap[p.name]) serviceMap[p.name]=0;
+    serviceMap[p.name]+=Number(p.yen);
   });
-  const labels = Object.keys(serviceMap);
-  const data = Object.values(serviceMap);
+  const labels=Object.keys(serviceMap);
+  const data=Object.values(serviceMap);
 
   if(serviceChart) serviceChart.destroy();
 
-  serviceChart = new Chart(ctx, {
-    type: 'pie',
-    data: {
-      labels: labels,
-      datasets: [{
-        data: data,
-        backgroundColor: labels.map((_, i) => `hsl(${i*60 % 360}, 70%, 60%)`)
+  serviceChart = new Chart(ctx,{
+    type:'pie',
+    data:{
+      labels:labels,
+      datasets:[{
+        data:data,
+        backgroundColor: labels.map((_,i)=>`hsl(${i*60 % 360}, 70%, 60%)`)
       }]
     },
-    options: { responsive:true, plugins:{ legend:{ position:'bottom' } } }
+    options:{responsive:true, plugins:{legend:{position:'bottom'}}}
   });
 }
 
@@ -202,27 +208,27 @@ updateTotals();
 updateServiceChart();
 
 // 保存ボタン
-saveBtn.addEventListener("click", () => {
-  const name = nameInput.value.trim();
-  const value = Number(valueInput.value);
-  const rate = Number(rateInput.value);
-  const color = colorSelect.value;
-  if(!name || !value || !rate) return;
+saveBtn.addEventListener("click",()=>{
+  const name=nameInput.value.trim();
+  const value=Number(valueInput.value);
+  const rate=Number(rateInput.value);
+  const color=colorSelect.value;
+  if(!name || !value || !rate || isNaN(value) || isNaN(rate)) return;
 
-  const today = new Date();
-  const dateStr = `${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}`;
-  const yen = Math.round(value * rate * 100) / 100; // 小数第2位まで
+  const today=new Date();
+  const dateStr=`${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}`;
+  const yen=Math.round(value*rate*100)/100;
 
-  savedPoints.push({name, value, yen, date: dateStr, color});
-  localStorage.setItem("points", JSON.stringify(savedPoints));
+  savedPoints.push({name,value,yen,date:dateStr,color});
+  localStorage.setItem("points",JSON.stringify(savedPoints));
 
   updatePointList();
   updateTotals();
   updateServiceChart();
 
-  nameInput.value = "";
-  valueInput.value = "";
-  rateInput.value = "1";
+  nameInput.value="";
+  valueInput.value="";
+  rateInput.value="1";
 });
 </script>
 
