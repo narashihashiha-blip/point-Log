@@ -40,6 +40,7 @@ canvas { max-width: 100%; margin: 0 auto; display: block; }
 <div class="card">
   <input type="text" id="pointName" placeholder="例：楽天ポイント">
   <input type="number" id="pointValue" placeholder="ポイント数">
+  <input type="number" id="pointRate" placeholder="1ポイント何円か" step="0.01" value="1">
 
   <select id="pointColor">
     <option value="#FF69B4">ピンク</option>
@@ -55,7 +56,7 @@ canvas { max-width: 100%; margin: 0 auto; display: block; }
 <h2>保存済みポイント</h2>
 <ul id="pointList"></ul>
 
-<h2>合計ポイント: <span id="totalPoints">0</span></h2>
+<h2>合計ポイント: <span id="totalPoints">0</span> / 合計金額: <span id="totalYen">0円</span></h2>
 
 <h2>サービス別合計</h2>
 <ul id="serviceTotalList"></ul>
@@ -63,22 +64,23 @@ canvas { max-width: 100%; margin: 0 auto; display: block; }
 <h2>月別合計</h2>
 <ul id="monthTotalList"></ul>
 
-<h2>アプリ別ポイントポートフォリオ</h2>
+<h2>アプリ別円換算ポートフォリオ</h2>
 <canvas id="serviceChart" width="400" height="400"></canvas>
 
 <script>
 const nameInput = document.getElementById("pointName");
 const valueInput = document.getElementById("pointValue");
+const rateInput = document.getElementById("pointRate");
 const colorSelect = document.getElementById("pointColor");
 const saveBtn = document.getElementById("saveBtn");
 const pointList = document.getElementById("pointList");
 const totalEl = document.getElementById("totalPoints");
+const totalYenEl = document.getElementById("totalYen");
 const serviceList = document.getElementById("serviceTotalList");
 const monthList = document.getElementById("monthTotalList");
 const ctx = document.getElementById('serviceChart').getContext('2d');
 let serviceChart;
 
-// localStorage から取得
 let savedPoints = JSON.parse(localStorage.getItem("points") || "[]");
 
 // ポイントをグループ化（日付＋サービス名）
@@ -87,12 +89,15 @@ function groupPoints(points) {
   points.forEach(p => {
     const key = `${p.date}_${p.name}`;
     if(!map[key]) map[key] = { ...p };
-    else map[key].value += Number(p.value);
+    else {
+      map[key].value += Number(p.value);
+      map[key].yen += Number(p.yen);
+    }
   });
   return Object.values(map);
 }
 
-// 個別リストに追加（まとめ表示）
+// 個別リストに追加
 function updatePointList() {
   pointList.innerHTML = "";
   const grouped = groupPoints(savedPoints);
@@ -110,7 +115,7 @@ function updatePointList() {
     dateSpan.textContent = `- ${p.date}: `;
 
     const valueSpan = document.createElement("span");
-    valueSpan.textContent = `${p.value}ポイント`;
+    valueSpan.textContent = `${p.value}ポイント (${p.yen}円)`;
 
     li.appendChild(nameSpan);
     li.appendChild(dateSpan);
@@ -132,20 +137,23 @@ function updatePointList() {
   });
 }
 
-// 合計・サービス別・月別集計更新
+// 合計・サービス別・月別更新
 function updateTotals() {
-  const total = savedPoints.reduce((sum, p) => sum + Number(p.value), 0);
-  totalEl.textContent = total;
+  const totalPoints = savedPoints.reduce((sum, p) => sum + Number(p.value), 0);
+  const totalYen = savedPoints.reduce((sum, p) => sum + Number(p.yen), 0);
+  totalEl.textContent = totalPoints;
+  totalYenEl.textContent = totalYen;
 
   const serviceMap = {};
   savedPoints.forEach(p => {
-    if(!serviceMap[p.name]) serviceMap[p.name] = 0;
-    serviceMap[p.name] += Number(p.value);
+    if(!serviceMap[p.name]) serviceMap[p.name] = { value:0, yen:0 };
+    serviceMap[p.name].value += Number(p.value);
+    serviceMap[p.name].yen += Number(p.yen);
   });
   serviceList.innerHTML = "";
-  for(const [name, value] of Object.entries(serviceMap)) {
+  for(const [name, obj] of Object.entries(serviceMap)) {
     const li = document.createElement("li");
-    li.textContent = `${name}: ${value}ポイント`;
+    li.textContent = `${name}: ${obj.value}ポイント (${obj.yen}円)`;
     serviceList.appendChild(li);
   }
 
@@ -153,24 +161,23 @@ function updateTotals() {
   savedPoints.forEach(p => {
     const month = p.date.slice(0,7);
     if(!monthMap[month]) monthMap[month] = 0;
-    monthMap[month] += Number(p.value);
+    monthMap[month] += Number(p.yen);
   });
   monthList.innerHTML = "";
   for(const [month, value] of Object.entries(monthMap)) {
     const li = document.createElement("li");
-    li.textContent = `${month}: ${value}ポイント`;
+    li.textContent = `${month}: ${value}円`;
     monthList.appendChild(li);
   }
 }
 
-// アプリ別円グラフ更新
+// アプリ別円グラフ
 function updateServiceChart() {
   const serviceMap = {};
   savedPoints.forEach(p => {
     if(!serviceMap[p.name]) serviceMap[p.name] = 0;
-    serviceMap[p.name] += Number(p.value);
+    serviceMap[p.name] += Number(p.yen);
   });
-
   const labels = Object.keys(serviceMap);
   const data = Object.values(serviceMap);
 
@@ -185,16 +192,11 @@ function updateServiceChart() {
         backgroundColor: labels.map((_, i) => `hsl(${i*60 % 360}, 70%, 60%)`)
       }]
     },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { position: 'bottom' }
-      }
-    }
+    options: { responsive:true, plugins:{ legend:{ position:'bottom' } } }
   });
 }
 
-// ページロード時に復元
+// 初期表示
 updatePointList();
 updateTotals();
 updateServiceChart();
@@ -203,13 +205,15 @@ updateServiceChart();
 saveBtn.addEventListener("click", () => {
   const name = nameInput.value.trim();
   const value = Number(valueInput.value);
+  const rate = Number(rateInput.value);
   const color = colorSelect.value;
-  if(!name || !value) return;
+  if(!name || !value || !rate) return;
 
   const today = new Date();
   const dateStr = `${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}`;
+  const yen = Math.round(value * rate * 100) / 100; // 小数第2位まで
 
-  savedPoints.push({name, value, date: dateStr, color});
+  savedPoints.push({name, value, yen, date: dateStr, color});
   localStorage.setItem("points", JSON.stringify(savedPoints));
 
   updatePointList();
@@ -218,6 +222,7 @@ saveBtn.addEventListener("click", () => {
 
   nameInput.value = "";
   valueInput.value = "";
+  rateInput.value = "1";
 });
 </script>
 
