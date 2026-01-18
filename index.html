@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Point Log 安定版</title>
+<title>Point Log 安定版（ポイント&円）</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
@@ -12,8 +12,6 @@ h1, h2 { text-align: center; }
 input, select, button { width: 100%; padding: 10px; margin-top: 8px; font-size: 16px; }
 ul { padding-left: 20px; }
 li { margin-bottom: 5px; display: flex; align-items: center; justify-content: flex-start; }
-
-/* 削除ボタン最小化 */
 button.deleteBtn {
   font-size: 14px;
   width: 24px;
@@ -29,18 +27,17 @@ button.deleteBtn {
   text-align: center;
 }
 button.deleteBtn:hover { background: #d32f2f; }
-
 canvas { max-width: 100%; margin: 0 auto; display: block; }
 </style>
 </head>
 <body>
 
-<h1>Point Log 安定版</h1>
+<h1>Point Log（ポイント&円入力）</h1>
 
 <div class="card">
   <input type="text" id="pointName" placeholder="例：楽天ポイント">
   <input type="number" id="pointValue" placeholder="ポイント数">
-  <input type="number" id="pointRate" placeholder="1ポイント何円か" step="0.01" value="1">
+  <input type="number" id="pointYen" placeholder="円額" step="0.01">
 
   <select id="pointColor">
     <option value="#FF69B4">ピンク</option>
@@ -70,7 +67,7 @@ canvas { max-width: 100%; margin: 0 auto; display: block; }
 <script>
 const nameInput = document.getElementById("pointName");
 const valueInput = document.getElementById("pointValue");
-const rateInput = document.getElementById("pointRate");
+const yenInput = document.getElementById("pointYen");
 const colorSelect = document.getElementById("pointColor");
 const saveBtn = document.getElementById("saveBtn");
 const pointList = document.getElementById("pointList");
@@ -83,27 +80,24 @@ let serviceChart;
 
 // localStorage 初期化・古い形式対応
 let rawPoints = JSON.parse(localStorage.getItem("points") || "[]");
-let savedPoints = rawPoints.map(p => {
-  // 古いデータには yen がない場合があるので計算
-  if(!p.yen) p.yen = Math.round(Number(p.value || 0) * Number(p.rate || 1) * 100)/100;
-  return {name:p.name, value:Number(p.value||0), yen:Number(p.yen||0), date:p.date||new Date().toISOString().slice(0,10), color:p.color||"#000"};
-});
+let savedPoints = rawPoints.map(p => ({
+  name: p.name || "",
+  value: Number(p.value || 0),
+  yen: Number(p.yen || 0),
+  date: p.date || new Date().toISOString().slice(0,10),
+  color: p.color || "#000"
+}));
 
-// グループ化（日付＋サービス名）
 function groupPoints(points){
   const map={};
   points.forEach(p=>{
     const key = `${p.date}_${p.name}`;
     if(!map[key]) map[key] = {...p};
-    else {
-      map[key].value += Number(p.value);
-      map[key].yen += Number(p.yen);
-    }
+    else { map[key].value += Number(p.value); map[key].yen += Number(p.yen); }
   });
   return Object.values(map);
 }
 
-// 個別リスト更新
 function updatePointList(){
   pointList.innerHTML="";
   const grouped = groupPoints(savedPoints);
@@ -143,7 +137,6 @@ function updatePointList(){
   });
 }
 
-// 集計更新
 function updateTotals(){
   const totalPoints = savedPoints.reduce((sum,p)=>sum+Number(p.value),0);
   const totalYen = savedPoints.reduce((sum,p)=>sum+Number(p.yen),0);
@@ -153,8 +146,8 @@ function updateTotals(){
   const serviceMap={};
   savedPoints.forEach(p=>{
     if(!serviceMap[p.name]) serviceMap[p.name]={value:0, yen:0};
-    serviceMap[p.name].value += Number(p.value);
-    serviceMap[p.name].yen += Number(p.yen);
+    serviceMap[p.name].value+=Number(p.value);
+    serviceMap[p.name].yen+=Number(p.yen);
   });
   serviceList.innerHTML="";
   for(const [name,obj] of Object.entries(serviceMap)){
@@ -177,7 +170,6 @@ function updateTotals(){
   }
 }
 
-// 円グラフ更新
 function updateServiceChart(){
   const serviceMap={};
   savedPoints.forEach(p=>{
@@ -211,13 +203,12 @@ updateServiceChart();
 saveBtn.addEventListener("click",()=>{
   const name=nameInput.value.trim();
   const value=Number(valueInput.value);
-  const rate=Number(rateInput.value);
+  const yen=Number(yenInput.value);
   const color=colorSelect.value;
-  if(!name || !value || !rate || isNaN(value) || isNaN(rate)) return;
+  if(!name || !value || !yen || isNaN(value) || isNaN(yen)) return;
 
   const today=new Date();
   const dateStr=`${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}`;
-  const yen=Math.round(value*rate*100)/100;
 
   savedPoints.push({name,value,yen,date:dateStr,color});
   localStorage.setItem("points",JSON.stringify(savedPoints));
@@ -228,7 +219,7 @@ saveBtn.addEventListener("click",()=>{
 
   nameInput.value="";
   valueInput.value="";
-  rateInput.value="1";
+  yenInput.value="";
 });
 </script>
 
