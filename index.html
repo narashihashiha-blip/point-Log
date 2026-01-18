@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+
+ <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -27,9 +28,7 @@ button.deleteBtn {
   border: none;
   text-align: center;
 }
-button.deleteBtn:hover {
-  background: #d32f2f;
-}
+button.deleteBtn:hover { background: #d32f2f; }
 </style>
 </head>
 <body>
@@ -75,39 +74,55 @@ const monthList = document.getElementById("monthTotalList");
 // localStorage から取得
 let savedPoints = JSON.parse(localStorage.getItem("points") || "[]");
 
-// 個別リストに追加（DOM 安全版）
-function addPointToList(name, value, date, color) {
-  const li = document.createElement("li");
-
-  const nameSpan = document.createElement("span");
-  nameSpan.style.fontWeight = "bold";
-  nameSpan.style.color = color;
-  nameSpan.textContent = name;
-
-  const dateSpan = document.createElement("span");
-  dateSpan.style.color = "#555";
-  dateSpan.style.margin = "0 4px";
-  dateSpan.textContent = `- ${date}: `;
-
-  const valueSpan = document.createElement("span");
-  valueSpan.textContent = `${value}ポイント`;
-
-  li.appendChild(nameSpan);
-  li.appendChild(dateSpan);
-  li.appendChild(valueSpan);
-
-  const delBtn = document.createElement("button");
-  delBtn.textContent = "×";
-  delBtn.className = "deleteBtn";
-  delBtn.addEventListener("click", () => {
-    pointList.removeChild(li);
-    savedPoints = savedPoints.filter(item => !(item.name === name && item.value === value && item.date === date));
-    localStorage.setItem("points", JSON.stringify(savedPoints));
-    updateTotals();
+// ポイントをグループ化（日付＋サービス名）
+function groupPoints(points) {
+  const map = {};
+  points.forEach(p => {
+    const key = `${p.date}_${p.name}`;
+    if(!map[key]) map[key] = { ...p };
+    else map[key].value += Number(p.value);
   });
+  return Object.values(map);
+}
 
-  li.appendChild(delBtn);
-  pointList.appendChild(li);
+// 個別リストに追加（まとめ表示）
+function updatePointList() {
+  pointList.innerHTML = "";
+  const grouped = groupPoints(savedPoints);
+  grouped.forEach(p => {
+    const li = document.createElement("li");
+
+    const nameSpan = document.createElement("span");
+    nameSpan.style.fontWeight = "bold";
+    nameSpan.style.color = p.color;
+    nameSpan.textContent = p.name;
+
+    const dateSpan = document.createElement("span");
+    dateSpan.style.color = "#555";
+    dateSpan.style.margin = "0 4px";
+    dateSpan.textContent = `- ${p.date}: `;
+
+    const valueSpan = document.createElement("span");
+    valueSpan.textContent = `${p.value}ポイント`;
+
+    li.appendChild(nameSpan);
+    li.appendChild(dateSpan);
+    li.appendChild(valueSpan);
+
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "×";
+    delBtn.className = "deleteBtn";
+    delBtn.addEventListener("click", () => {
+      // まとめたポイントを削除
+      savedPoints = savedPoints.filter(item => !(item.name === p.name && item.date === p.date));
+      localStorage.setItem("points", JSON.stringify(savedPoints));
+      updatePointList();
+      updateTotals();
+    });
+
+    li.appendChild(delBtn);
+    pointList.appendChild(li);
+  });
 }
 
 // 合計・サービス別・月別集計更新
@@ -142,10 +157,7 @@ function updateTotals() {
 }
 
 // ページロード時に復元
-savedPoints.forEach(p => {
-  const color = p.color || "#000";
-  addPointToList(p.name, p.value, p.date, color);
-});
+updatePointList();
 updateTotals();
 
 // 保存ボタン
@@ -158,9 +170,10 @@ saveBtn.addEventListener("click", () => {
   const today = new Date();
   const dateStr = `${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}`;
 
-  addPointToList(name, value, dateStr, color);
   savedPoints.push({name, value, date: dateStr, color});
   localStorage.setItem("points", JSON.stringify(savedPoints));
+
+  updatePointList();
   updateTotals();
 
   nameInput.value = "";
