@@ -158,5 +158,22 @@ function render(){
 render();
 </script>
 
+<script>
+  function openRecord() {
+    const appName = prompt("アプリ名を入力してください");
+    if (!appName) return;
+
+    const points = prompt("ポイント数を入力してください");
+    if (!points || isNaN(points)) {
+      alert("ポイント数を正しく入力してください");
+      return;
+    }
+
+    alert(
+      "【記録完了】\n" +
+      appName + " に " + points + " ポイントを記録しました"
+    );
+  }
+</script>
 </body>
 </html>
