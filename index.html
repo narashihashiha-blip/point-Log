@@ -1,165 +1,104 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Point Log</title>
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Plus, Home, Edit3 } from "lucide-react";
 
-<style>
-body {
-  margin: 0;
-  font-family: system-ui, sans-serif;
-  background: #f3f4f6;
+export default function PointLogApp() {
+  const [apps, setApps] = useState([]);
+  const [points, setPoints] = useState("");
+  const [selectedApp, setSelectedApp] = useState(null);
+  const [view, setView] = useState("home");
+
+  const addApp = () => {
+    const name = prompt("アプリ名を入力");
+    const rate = prompt("何ポイントで何円？（例：1000pt = 10円）");
+    if (!name || !rate) return;
+    setApps([...apps, { name, rate, total: 0 }]);
+  };
+
+  const recordPoint = () => {
+    if (!selectedApp || !points) return;
+    setApps(apps.map(a => a === selectedApp ? { ...a, total: a.total + Number(points) } : a));
+    setPoints("");
+  };
+
+  return (
+    <div className="p-4 max-w-md mx-auto">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-xl font-bold">Point Log</h1>
+        <Button size="icon" onClick={() => setView("record")}>
+          <Edit3 />
+        </Button>
+      </div>
+
+      {/* Home */}
+      {view === "home" && (
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="p-4">
+              <h2 className="font-semibold mb-2">アプリ別残高</h2>
+              <div className="grid grid-cols-3 gap-3">
+                {apps.map((app, i) => (
+                  <div key={i} className="bg-gray-100 rounded-2xl p-3 text-center">
+                    <p className="text-sm font-medium">{app.name}</p>
+                    <p className="text-xs text-gray-500">{app.total} pt</p>
+                  </div>
+                ))}
+                <button onClick={addApp} className="border-2 border-dashed rounded-2xl flex items-center justify-center">
+                  <Plus />
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 text-center text-gray-500">
+              ポートフォリオ（実装済み・今後グラフ化）
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Record */}
+      {view === "record" && (
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="p-4">
+              <h2 className="font-semibold mb-3">記録する</h2>
+              <div className="space-y-3">
+                <select
+                  className="w-full rounded-2xl p-3 bg-gray-100"
+                  onChange={e => setSelectedApp(apps[e.target.value])}
+                >
+                  <option>アプリを選択</option>
+                  {apps.map((app, i) => (
+                    <option value={i} key={i}>{app.name}</option>
+                  ))}
+                </select>
+
+                <div className="relative">
+                  <Input
+                    type="number"
+                    placeholder="獲得ポイント"
+                    value={points}
+                    onChange={e => setPoints(e.target.value)}
+                    className="rounded-2xl text-lg py-6"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">pt</span>
+                </div>
+
+                <Button className="w-full rounded-2xl py-6 text-lg" onClick={recordPoint}>
+                  記録する
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Button variant="outline" className="w-full" onClick={() => setView("home")}>ホームに戻る</Button>
+        </div>
+      )}
+    </div>
+  );
 }
-h1 {
-  text-align: center;
-  margin: 16px 0;
-}
-section {
-  padding: 16px;
-}
-.grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-.app {
-  background: #fff;
-  border-radius: 16px;
-  height: 90px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  text-align: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,.1);
-}
-.add {
-  background: #e0e7ff;
-  color: #4f46e5;
-  font-weight: bold;
-}
-.hidden { display: none; }
-
-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  background: #fff;
-  border-top: 1px solid #ddd;
-}
-nav button {
-  flex: 1;
-  padding: 10px;
-  border: none;
-  background: none;
-}
-nav .active {
-  color: #4f46e5;
-  font-weight: bold;
-}
-.card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 12px;
-}
-</style>
-</head>
-
-<body>
-
-<h1>Point Log</h1>
-
-<!-- ホーム -->
-<section id="home">
-  <div class="card">
-    <h3>アプリ別残高</h3>
-    <div id="homeList">まだ記録はありません</div>
-  </div>
-  <div class="card">
-    <h3>ポートフォリオ（準備中）</h3>
-    <p>月間 / 日間 獲得ポイント</p>
-  </div>
-</section>
-
-<!-- 記録 -->
-<section id="record" class="hidden">
-  <h3>記録するアプリを選択</h3>
-  <div class="grid" id="appGrid"></div>
-</section>
-
-<nav>
-  <button class="active" onclick="tab('home',this)">ホーム</button>
-  <button onclick="tab('record',this)">記録</button>
-</nav>
-
-<script>
-let data = JSON.parse(localStorage.getItem("pointLog")) || {};
-
-function tab(id, btn) {
-  document.getElementById("home").classList.add("hidden");
-  document.getElementById("record").classList.add("hidden");
-  document.getElementById(id).classList.remove("hidden");
-  document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");
-}
-
-function render() {
-  const grid = document.getElementById("appGrid");
-  const home = document.getElementById("homeList");
-  grid.innerHTML = "";
-  home.innerHTML = "";
-
-  Object.keys(data).forEach(app=>{
-    const a = document.createElement("div");
-    a.className="app";
-    a.textContent=app;
-    a.onclick=()=>addPoint(app);
-    grid.appendChild(a);
-
-    const yen = Math.floor(data[app].point * data[app].yen / data[app].base);
-    const h = document.createElement("div");
-    h.textContent = `${app}：${data[app].point}pt（約${yen}円）`;
-    home.appendChild(h);
-  });
-
-  const add = document.createElement("div");
-  add.className="app add";
-  add.textContent="＋ アプリ追加";
-  add.onclick=addApp;
-  grid.appendChild(add);
-
-  if(!home.innerHTML) home.textContent="まだ記録はありません";
-}
-
-function addApp() {
-  const name = prompt("アプリ名");
-  if(!name) return;
-  const base = prompt("何ポイントで？");
-  const yen = prompt("何円？");
-  data[name]={point:0,base:Number(base),yen:Number(yen)};
-  save();
-}
-
-function addPoint(app) {
-  const p = prompt(`${app} に追加するポイント`);
-  if(!p) return;
-  data[app].point += Number(p);
-  save();
-}
-
-function save(){
-  localStorage.setItem("pointLog",JSON.stringify(data));
-  render();
-}
-
-render();
-</script>
-
-</body>
-</html>
-
-
