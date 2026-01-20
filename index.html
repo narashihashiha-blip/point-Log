@@ -7,36 +7,40 @@
 
 <style>
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background: #f3f4f6;
   margin: 0;
-  padding: 16px;
+  font-family: system-ui, sans-serif;
+  background: #f3f4f6;
 }
 h1 {
   text-align: center;
+  margin: 16px 0;
 }
-.card {
-  background: #fff;
-  border-radius: 12px;
+section {
   padding: 16px;
-  margin-bottom: 12px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
-button {
-  padding: 10px;
-  border: none;
-  border-radius: 8px;
-  background: #4f46e5;
-  color: white;
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.app {
+  background: #fff;
+  border-radius: 16px;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 14px;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,.1);
 }
-.list {
-  margin-top: 8px;
+.add {
+  background: #e0e7ff;
+  color: #4f46e5;
+  font-weight: bold;
 }
-.item {
-  padding: 8px 0;
-  border-bottom: 1px solid #eee;
-}
+.hidden { display: none; }
+
 nav {
   position: fixed;
   bottom: 0;
@@ -48,13 +52,19 @@ nav {
 }
 nav button {
   flex: 1;
-  border-radius: 0;
+  padding: 10px;
+  border: none;
   background: none;
-  color: #333;
 }
-nav button.active {
-  background: #e0e7ff;
+nav .active {
   color: #4f46e5;
+  font-weight: bold;
+}
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
 }
 </style>
 </head>
@@ -64,70 +74,86 @@ nav button.active {
 <h1>Point Log</h1>
 
 <!-- ホーム -->
-<div id="home" class="card">
-  <h2>ホーム</h2>
-  <div id="portfolio">まだ記録はありません</div>
-</div>
+<section id="home">
+  <div class="card">
+    <h3>アプリ別残高</h3>
+    <div id="homeList">まだ記録はありません</div>
+  </div>
+  <div class="card">
+    <h3>ポートフォリオ（準備中）</h3>
+    <p>月間 / 日間 獲得ポイント</p>
+  </div>
+</section>
 
 <!-- 記録 -->
-<div id="record" class="card" style="display:none">
-  <h2>記録</h2>
-  <button onclick="addRecord()">＋ 記録する</button>
-</div>
+<section id="record" class="hidden">
+  <h3>記録するアプリを選択</h3>
+  <div class="grid" id="appGrid"></div>
+</section>
 
 <nav>
-  <button class="active" onclick="showTab('home', this)">ホーム</button>
-  <button onclick="showTab('record', this)">記録</button>
+  <button class="active" onclick="tab('home',this)">ホーム</button>
+  <button onclick="tab('record',this)">記録</button>
 </nav>
 
 <script>
 let data = JSON.parse(localStorage.getItem("pointLog")) || {};
 
-function showTab(tab, btn) {
-  document.getElementById("home").style.display = tab === "home" ? "block" : "none";
-  document.getElementById("record").style.display = tab === "record" ? "block" : "none";
-  document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+function tab(id, btn) {
+  document.getElementById("home").classList.add("hidden");
+  document.getElementById("record").classList.add("hidden");
+  document.getElementById(id).classList.remove("hidden");
+  document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
 }
 
-function addRecord() {
-  const app = prompt("アプリ名を入力してください");
-  if (!app) return;
+function render() {
+  const grid = document.getElementById("appGrid");
+  const home = document.getElementById("homeList");
+  grid.innerHTML = "";
+  home.innerHTML = "";
 
-  const basePoint = prompt("何ポイントで何円ですか？（例：100）");
-  const baseYen = prompt("そのポイントは何円ですか？（例：100）");
-  if (!basePoint || !baseYen) return;
+  Object.keys(data).forEach(app=>{
+    const a = document.createElement("div");
+    a.className="app";
+    a.textContent=app;
+    a.onclick=()=>addPoint(app);
+    grid.appendChild(a);
 
-  const addPoint = prompt("今回追加するポイント数を入力してください");
-  if (!addPoint) return;
+    const yen = Math.floor(data[app].point * data[app].yen / data[app].base);
+    const h = document.createElement("div");
+    h.textContent = `${app}：${data[app].point}pt（約${yen}円）`;
+    home.appendChild(h);
+  });
 
-  if (!data[app]) {
-    data[app] = { point: 0, basePoint, baseYen };
-  }
+  const add = document.createElement("div");
+  add.className="app add";
+  add.textContent="＋ アプリ追加";
+  add.onclick=addApp;
+  grid.appendChild(add);
 
-  data[app].point += Number(addPoint);
-  localStorage.setItem("pointLog", JSON.stringify(data));
-  render();
+  if(!home.innerHTML) home.textContent="まだ記録はありません";
 }
 
-function render() {
-  const el = document.getElementById("portfolio");
-  el.innerHTML = "";
+function addApp() {
+  const name = prompt("アプリ名");
+  if(!name) return;
+  const base = prompt("何ポイントで？");
+  const yen = prompt("何円？");
+  data[name]={point:0,base:Number(base),yen:Number(yen)};
+  save();
+}
 
-  const keys = Object.keys(data);
-  if (keys.length === 0) {
-    el.textContent = "まだ記録はありません";
-    return;
-  }
+function addPoint(app) {
+  const p = prompt(`${app} に追加するポイント`);
+  if(!p) return;
+  data[app].point += Number(p);
+  save();
+}
 
-  keys.forEach(app => {
-    const p = data[app];
-    const yen = Math.floor(p.point * (p.baseYen / p.basePoint));
-    const div = document.createElement("div");
-    div.className = "item";
-    div.textContent = `${app}：${p.point}pt（約${yen}円）`;
-    el.appendChild(div);
-  });
+function save(){
+  localStorage.setItem("pointLog",JSON.stringify(data));
+  render();
 }
 
 render();
@@ -135,3 +161,4 @@ render();
 
 </body>
 </html>
+
