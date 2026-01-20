@@ -2,178 +2,136 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>point Log</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Point Log</title>
+
 <style>
-body { margin:0; font-family:sans-serif; background:#f2f2f2; }
-header { background:#222; color:#fff; padding:12px; text-align:center; font-size:20px; }
-main { padding:16px; padding-bottom:80px; }
-.card { background:#fff; border-radius:14px; padding:16px; margin-bottom:16px; box-shadow:0 2px 6px rgba(0,0,0,.1); }
-.hidden { display:none; }
-input, button { width:100%; padding:10px; margin-top:8px; font-size:16px; }
-button { background:#4CAF50; color:#fff; border:none; border-radius:10px; }
-
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f3f4f6;
+  margin: 0;
+  padding: 16px;
+}
+h1 {
+  text-align: center;
+}
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+button {
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #4f46e5;
+  color: white;
+  font-size: 14px;
+}
+.list {
+  margin-top: 8px;
+}
+.item {
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
 nav {
-  position:fixed; bottom:0; left:0; right:0;
-  height:60px; background:#fff; display:flex; border-top:1px solid #ccc;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: #fff;
+  border-top: 1px solid #ddd;
 }
-nav button { flex:1; border:none; background:none; font-size:14px; }
-
-.app-grid {
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:14px;
+nav button {
+  flex: 1;
+  border-radius: 0;
+  background: none;
+  color: #333;
 }
-.app-icon {
-  background:#fff;
-  border-radius:16px;
-  padding:20px 8px;
-  text-align:center;
-  box-shadow:0 2px 4px rgba(0,0,0,.15);
-  cursor:pointer;
+nav button.active {
+  background: #e0e7ff;
+  color: #4f46e5;
 }
-.app-icon strong {
-  display:block;
-  font-size:18px;
-}
-
-.bar { height:18px; background:#4CAF50; border-radius:10px; }
-.bar-row { margin-bottom:10px; }
-.total { font-size:26px; font-weight:bold; text-align:center; }
 </style>
 </head>
 
 <body>
 
-<header>point Log</header>
-
-<main>
+<h1>Point Log</h1>
 
 <!-- ホーム -->
-<section id="home">
-  <div class="card total" id="totalYen">合計：0 円</div>
+<div id="home" class="card">
+  <h2>ホーム</h2>
+  <div id="portfolio">まだ記録はありません</div>
+</div>
 
-  <div class="card">
-    <h3>アプリ別残高</h3>
-    <div id="bars"></div>
-  </div>
-
-  <div class="card">
-    <h3>ポートフォリオ</h3>
-    <div class="app-grid" id="homeIcons"></div>
-  </div>
-</section>
-
-<!-- 記録（アプリ選択） -->
-<section id="record" class="hidden">
-  <div class="card">
-    <h3>記録するアプリを選択</h3>
-    <div class="app-grid" id="recordIcons"></div>
-  </div>
-</section>
-
-<!-- 記録詳細 -->
-<section id="recordDetail" class="hidden">
-  <div class="card">
-    <h3 id="recordTitle"></h3>
-    <input id="addPoint" type="number" placeholder="追加するポイント">
-    <button onclick="savePoint()">記録する</button>
-  </div>
-</section>
-
-<!-- 設定 -->
-<section id="setting" class="hidden">
-  <div class="card"><h3>設定</h3><p>今後追加予定</p></div>
-</section>
-
-</main>
+<!-- 記録 -->
+<div id="record" class="card" style="display:none">
+  <h2>記録</h2>
+  <button onclick="addRecord()">＋ 記録する</button>
+</div>
 
 <nav>
-  <button onclick="show('home')">🏠 ホーム</button>
-  <button onclick="show('record')">📝 記録</button>
-  <button onclick="show('setting')">⚙️ 設定</button>
+  <button class="active" onclick="showTab('home', this)">ホーム</button>
+  <button onclick="showTab('record', this)">記録</button>
 </nav>
 
 <script>
-let apps = JSON.parse(localStorage.getItem("apps")) || {};
-let currentApp = null;
+let data = JSON.parse(localStorage.getItem("pointLog")) || {};
 
-function save(){ localStorage.setItem("apps", JSON.stringify(apps)); }
-
-function show(id){
-  document.querySelectorAll("section").forEach(s=>s.classList.add("hidden"));
-  document.getElementById(id).classList.remove("hidden");
+function showTab(tab, btn) {
+  document.getElementById("home").style.display = tab === "home" ? "block" : "none";
+  document.getElementById("record").style.display = tab === "record" ? "block" : "none";
+  document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
 }
 
-function openRecord(name){
-  currentApp = name;
-  recordTitle.textContent = name + " のポイントを記録";
-  addPoint.value = "";
-  show("recordDetail");
-}
+function addRecord() {
+  const app = prompt("アプリ名を入力してください");
+  if (!app) return;
 
-function savePoint(){
-  const p = Number(addPoint.value);
-  if(p<=0) return alert("ポイント数エラー");
-  apps[currentApp].point += p;
-  save();
+  const basePoint = prompt("何ポイントで何円ですか？（例：100）");
+  const baseYen = prompt("そのポイントは何円ですか？（例：100）");
+  if (!basePoint || !baseYen) return;
+
+  const addPoint = prompt("今回追加するポイント数を入力してください");
+  if (!addPoint) return;
+
+  if (!data[app]) {
+    data[app] = { point: 0, basePoint, baseYen };
+  }
+
+  data[app].point += Number(addPoint);
+  localStorage.setItem("pointLog", JSON.stringify(data));
   render();
-  show("home");
 }
 
-function render(){
-  let total=0, max=0;
-  bars.innerHTML="";
-  homeIcons.innerHTML="";
-  recordIcons.innerHTML="";
+function render() {
+  const el = document.getElementById("portfolio");
+  el.innerHTML = "";
 
-  for(const n in apps){
-    const y = apps[n].point * apps[n].rateYen / apps[n].ratePoint;
-    if(y>max) max=y;
+  const keys = Object.keys(data);
+  if (keys.length === 0) {
+    el.textContent = "まだ記録はありません";
+    return;
   }
 
-  for(const name in apps){
-    const a = apps[name];
-    const yen = Math.round(a.point * a.rateYen / a.ratePoint);
-    total+=yen;
-
-    bars.innerHTML += `
-      <div class="bar-row">${name} (${yen}円)
-        <div class="bar" style="width:${max?yen/max*100:0}%"></div>
-      </div>`;
-
-    const icon = `<div class="app-icon" onclick="openRecord('${name}')">
-      <strong>${yen}</strong>${name}</div>`;
-
-    homeIcons.innerHTML += icon;
-    recordIcons.innerHTML += icon;
-  }
-
-  homeIcons.innerHTML += `<div class="app-icon" onclick="alert('設定画面で追加予定')">
-    <strong>＋</strong>追加</div>`;
-
-  totalYen.textContent = "合計：" + total + " 円";
+  keys.forEach(app => {
+    const p = data[app];
+    const yen = Math.floor(p.point * (p.baseYen / p.basePoint));
+    const div = document.createElement("div");
+    div.className = "item";
+    div.textContent = `${app}：${p.point}pt（約${yen}円）`;
+    el.appendChild(div);
+  });
 }
 
 render();
 </script>
 
-<script>
-  function openRecord() {
-    const appName = prompt("アプリ名を入力してください");
-    if (!appName) return;
-
-    const points = prompt("ポイント数を入力してください");
-    if (!points || isNaN(points)) {
-      alert("ポイント数を正しく入力してください");
-      return;
-    }
-
-    alert(
-      "【記録完了】\n" +
-      appName + " に " + points + " ポイントを記録しました"
-    );
-  }
-</script>
 </body>
 </html>
