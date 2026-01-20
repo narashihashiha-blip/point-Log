@@ -40,23 +40,16 @@ button {
   border: none;
   border-radius: 10px;
 }
-.list-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 10px;
-}
-.delete {
-  background: none;
-  color: red;
-  font-size: 20px;
-  border: none;
+.hidden {
+  display: none;
 }
 .total {
   font-size: 26px;
   font-weight: bold;
   text-align: center;
 }
+
+/* ナビ */
 nav {
   position: fixed;
   bottom: 0;
@@ -73,8 +66,35 @@ nav button {
   background: none;
   font-size: 14px;
 }
-.hidden {
-  display: none;
+
+/* アプリアイコン */
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.app-icon {
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px 6px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  font-size: 12px;
+  cursor: pointer;
+}
+.app-icon strong {
+  display: block;
+  font-size: 16px;
+}
+
+/* 棒グラフ */
+.bar {
+  height: 18px;
+  background: #4CAF50;
+  border-radius: 10px;
+}
+.bar-row {
+  margin-bottom: 10px;
 }
 </style>
 </head>
@@ -88,27 +108,33 @@ nav button {
 <!-- ホーム -->
 <section id="home">
   <div class="card total" id="totalYen">合計：0 円</div>
+
   <div class="card">
-    <h3>保存済みポイント</h3>
-    <div id="list"></div>
+    <h3>アプリ別残高</h3>
+    <div id="bars"></div>
+  </div>
+
+  <div class="card">
+    <h3>ポートフォリオ</h3>
+    <div class="app-grid" id="icons"></div>
   </div>
 </section>
 
-<!-- 追加 -->
-<section id="add" class="hidden">
+<!-- 記録 -->
+<section id="record" class="hidden">
   <div class="card">
     <h3>① アプリを登録</h3>
-    <input id="appName" placeholder="アプリ名（例：楽天ポイント）">
+    <input id="appName" placeholder="アプリ名">
     <input id="ratePoint" type="number" placeholder="何ポイント">
     <input id="rateYen" type="number" placeholder="何円">
-    <button onclick="addApp()">アプリを登録</button>
+    <button onclick="addApp()">アプリ登録</button>
   </div>
 
   <div class="card">
-    <h3>② ポイントを追加</h3>
+    <h3>② ポイントを記録</h3>
     <input id="pointApp" placeholder="アプリ名">
-    <input id="addPoint" type="number" placeholder="追加するポイント">
-    <button onclick="addPoint()">ポイントを追加</button>
+    <input id="addPoint" type="number" placeholder="追加ポイント">
+    <button onclick="addPoint()">記録する</button>
   </div>
 </section>
 
@@ -124,7 +150,7 @@ nav button {
 
 <nav>
   <button onclick="show('home')">🏠 ホーム</button>
-  <button onclick="show('add')">➕ 追加</button>
+  <button onclick="show('record')">📝 記録</button>
   <button onclick="show('setting')">⚙️ 設定</button>
 </nav>
 
@@ -144,68 +170,70 @@ function addApp() {
   const name = appName.value.trim();
   const rp = Number(ratePoint.value);
   const ry = Number(rateYen.value);
-  if (!name || rp <= 0 || ry <= 0) {
-    alert("正しく入力してください");
-    return;
-  }
-  apps[name] = {
-    ratePoint: rp,
-    rateYen: ry,
-    point: apps[name]?.point || 0
-  };
+  if (!name || rp <= 0 || ry <= 0) return alert("入力エラー");
+  apps[name] = { ratePoint: rp, rateYen: ry, point: apps[name]?.point || 0 };
   save();
   render();
-  alert("アプリを登録しました");
+  show("home");
 }
 
 function addPoint() {
   const name = pointApp.value.trim();
   const p = Number(addPoint.value);
-  if (!apps[name]) {
-    alert("先にアプリを登録してください");
-    return;
-  }
-  if (p <= 0) {
-    alert("ポイント数が不正です");
-    return;
-  }
+  if (!apps[name]) return alert("未登録アプリ");
+  if (p <= 0) return alert("数値エラー");
   apps[name].point += p;
   save();
   render();
-  alert("ポイントを追加しました");
-}
-
-function removeApp(name) {
-  if (!confirm("削除しますか？")) return;
-  delete apps[name];
-  save();
-  render();
+  show("home");
 }
 
 function render() {
-  const list = document.getElementById("list");
-  list.innerHTML = "";
   let total = 0;
+  const bars = document.getElementById("bars");
+  const icons = document.getElementById("icons");
+  bars.innerHTML = "";
+  icons.innerHTML = "";
+
+  let max = 0;
+  for (const n in apps) {
+    const y = apps[n].point * apps[n].rateYen / apps[n].ratePoint;
+    if (y > max) max = y;
+  }
 
   for (const name in apps) {
     const a = apps[name];
-    const yen = a.point * a.rateYen / a.ratePoint;
+    const yen = Math.round(a.point * a.rateYen / a.ratePoint);
     total += yen;
 
-    const div = document.createElement("div");
-    div.className = "list-item";
-    div.innerHTML = `
-      <div>
-        <strong>${name}</strong><br>
-        ${a.point} pt → ${Math.round(yen)} 円
-      </div>
-      <button class="delete" onclick="removeApp('${name}')">×</button>
+    // 棒グラフ
+    const row = document.createElement("div");
+    row.className = "bar-row";
+    row.innerHTML = `
+      ${name} (${yen}円)
+      <div class="bar" style="width:${(yen/max)*100}%"></div>
     `;
-    list.appendChild(div);
+    bars.appendChild(row);
+
+    // アイコン
+    const icon = document.createElement("div");
+    icon.className = "app-icon";
+    icon.innerHTML = `<strong>${yen}</strong>${name}`;
+    icon.onclick = () => {
+      pointApp.value = name;
+      show("record");
+    };
+    icons.appendChild(icon);
   }
 
-  document.getElementById("totalYen").textContent =
-    "合計：" + Math.round(total) + " 円";
+  // 追加ボタン
+  const add = document.createElement("div");
+  add.className = "app-icon";
+  add.innerHTML = "<strong>＋</strong>追加";
+  add.onclick = () => show("record");
+  icons.appendChild(add);
+
+  document.getElementById("totalYen").textContent = "合計：" + total + " 円";
 }
 
 render();
